@@ -3,6 +3,7 @@ package ecdh
 import (
 	"crypto"
 	"crypto/elliptic"
+	"errors"
 	"io"
 	"math/big"
 )
@@ -46,10 +47,10 @@ func (e *ellipticECDH) GenerateKey(rand io.Reader) (crypto.PrivateKey, crypto.Pu
 	}
 	pub = &ellipticPublicKey{
 		Curve: e.curve,
-		X: x,
-		Y: y,
+		X:     x,
+		Y:     y,
 	}
-	
+
 	return priv, pub, nil
 }
 
@@ -81,6 +82,10 @@ func (e *ellipticECDH) Unmarshal(data []byte) (crypto.PublicKey, bool) {
 func (e *ellipticECDH) GenerateSharedSecret(privKey crypto.PrivateKey, pubKey crypto.PublicKey) ([]byte, error) {
 	priv := privKey.(*ellipticPrivateKey)
 	pub := pubKey.(*ellipticPublicKey)
+
+	if !e.curve.IsOnCurve(pub.X, pub.Y) {
+		return nil, errors.New("public key is not on curve")
+	}
 
 	x, _ := e.curve.ScalarMult(pub.X, pub.Y, priv.D)
 	return x.Bytes(), nil
